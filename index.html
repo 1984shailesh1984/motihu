@@ -106,18 +106,25 @@
   <canvas id="weightChart" height="150"></canvas>
 
   <script>
-    
-const firebaseConfig = {
-  apiKey: "AIzaSyAf-TU3p-LR-RjZb0bJ-mClqUcPhx5Tj6s",
-  authDomain: "weight-a4704.firebaseapp.com",
-  projectId: "weight-a4704",
-  storageBucket: "weight-a4704.firebasestorage.app",
-  messagingSenderId: "866371638418",
-  appId: "1:866371638418:web:74fc22352c17057feac24b"
-};
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    let db;
     let weightChart;
+
+    // Initialize Firebase and Firestore
+    function initializeFirebase() {
+      const firebaseConfig = {
+        apiKey: "AIzaSyAf-TU3p-LR-RjZb0bJ-mClqUcPhx5Tj6s",
+        authDomain: "weight-a4704.firebaseapp.com",
+        projectId: "weight-a4704",
+        storageBucket: "weight-a4704.firebasestorage.app",
+        messagingSenderId: "866371638418",
+        appId: "1:866371638418:web:74fc22352c17057feac24b"
+      };
+      
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      
+      fetchEntries(); // Fetch entries once Firebase is initialized
+    }
 
     function toggleTheme() {
       document.body.classList.toggle('dark');
@@ -223,7 +230,7 @@ const firebaseConfig = {
     }
 
     fetchQuote();
-    fetchEntries();
+    initializeFirebase(); // Initialize Firebase when the page loads
   </script>
 </body>
 </html>
