@@ -1,134 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Weight Gain Tracker</title>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js" type="module"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Meal Log (Firebase)</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
   <style>
-    /* Your styles here */
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    input, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+    .entry {
+      margin-top: 30px;
+    }
   </style>
 </head>
 <body>
-  <h1>🍚 Weight Gain Daily Log</h1>
-  <p>Log your meals, weight, and notes daily.</p>
-  <button onclick="toggleTheme()">🌓 Toggle Theme</button>
+  <h1>🥘 Daily Meal Log</h1>
 
-  <p class="quote" id="dailyQuote">💬 Loading quote...</p>
+  <label for="entryDate">Date:</label>
+  <input type="date" id="entryDate">
 
-  <input type="date" id="entryDate" />
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>What I Ate</th>
+      </tr>
+    </thead>
+    <tbody id="mealInputs">
+      <tr><td><input type="time" /></td><td><input type="text" placeholder="E.g. Roti, Dal" /></td></tr>
+    </tbody>
+  </table>
 
-  <div class="meal-block">
-    <label for="breakfast">🍳 Breakfast</label>
-    <textarea id="breakfast" rows="3" placeholder="E.g. Eggs, toast, milk..."></textarea>
+  <button onclick="addMealRow()">➕ Add More Rows</button>
+  <button onclick="saveToFirebase()">💾 Save to Firebase</button>
+
+  <div class="entry">
+    <h2>🗂️ Previous Entries</h2>
+    <div id="entries"></div>
   </div>
 
-  <div class="meal-block">
-    <label for="lunch">🍛 Lunch</label>
-    <textarea id="lunch" rows="3" placeholder="E.g. Rice, dal, sabzi..."></textarea>
-  </div>
-
-  <div class="meal-block">
-    <label for="snacks">☕ Snacks</label>
-    <textarea id="snacks" rows="2" placeholder="E.g. Nuts, fruit, shake..."></textarea>
-  </div>
-
-  <div class="meal-block">
-    <label for="dinner">🍽️ Dinner</label>
-    <textarea id="dinner" rows="3" placeholder="E.g. Roti, paneer, salad..."></textarea>
-  </div>
-
-  <textarea id="notes" rows="2" placeholder="Any notes, energy level, workouts..."></textarea>
-
-  <input type="number" step="0.1" id="weight" placeholder="Today's weight in kg (optional)" />
-  <button onclick="addEntry()">💾 Save Entry</button>
-
-  <h2>📅 Your Entries</h2>
-  <div id="entries"></div>
-
-  <canvas id="weightChart" height="150"></canvas>
-
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js';
-    import { getFirestore, collection, addDoc, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js';
-
-    let db;
-    let weightChart;
-
+  <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyAf-TU3p-LR-RjZb0bJ-mClqUcPhx5Tj6s",
-      authDomain: "weight-a4704.firebaseapp.com",
-      projectId: "weight-a4704",
-      storageBucket: "weight-a4704.firebasestorage.app",
-      messagingSenderId: "866371638418",
-      appId: "1:866371638418:web:74fc22352c17057feac24b"
-    };
+  apiKey: "AIzaSyAf-TU3p-LR-RjZb0bJ-mClqUcPhx5Tj6s",
+  authDomain: "weight-a4704.firebaseapp.com",
+  databaseURL: "https://weight-a4704-default-rtdb.firebaseio.com",
+  projectId: "weight-a4704",
+  storageBucket: "weight-a4704.firebasestorage.app",
+  messagingSenderId: "866371638418",
+  appId: "1:866371638418:web:74fc22352c17057feac24b"
+};
 
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    function toggleTheme() {
-      document.body.classList.toggle('dark');
+    function addMealRow() {
+      const row = document.createElement('tr');
+      row.innerHTML = '<td><input type="time" /></td><td><input type="text" placeholder="E.g. Rice, Sabzi" /></td>';
+      document.getElementById('mealInputs').appendChild(row);
     }
 
-    function addEntry() {
+    function saveToFirebase() {
       const date = document.getElementById('entryDate').value;
-      const breakfast = document.getElementById('breakfast').value;
-      const lunch = document.getElementById('lunch').value;
-      const snacks = document.getElementById('snacks').value;
-      const dinner = document.getElementById('dinner').value;
-      const notes = document.getElementById('notes').value;
-      const weight = document.getElementById('weight').value;
+      if (!date) return alert("Please select a date.");
 
-      if (!date || (!breakfast && !lunch && !snacks && !dinner)) {
-        alert('Please fill in the date and at least one meal.');
-        return;
-      }
-
-      addDoc(collection(db, 'weightGainLogs'), {
-        date,
-        meals: { breakfast, lunch, snacks, dinner },
-        notes,
-        weight
-      }).then(() => {
-        document.getElementById('entryDate').value = '';
-        document.getElementById('breakfast').value = '';
-        document.getElementById('lunch').value = '';
-        document.getElementById('snacks').value = '';
-        document.getElementById('dinner').value = '';
-        document.getElementById('notes').value = '';
-        document.getElementById('weight').value = '';
-        fetchEntries();
-      });
-    }
-
-    function renderChart(dataPoints) {
-      const ctx = document.getElementById('weightChart').getContext('2d');
-      if (weightChart) weightChart.destroy();
-
-      const labels = dataPoints.map(entry => entry.date);
-      const weights = dataPoints.map(entry => parseFloat(entry.weight || 0));
-
-      weightChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Weight (kg)',
-            data: weights,
-            fill: false,
-            borderColor: 'green',
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: { beginAtZero: false }
-          }
+      const rows = document.querySelectorAll('#mealInputs tr');
+      const entries = [];
+      rows.forEach(row => {
+        const time = row.children[0].children[0].value;
+        const food = row.children[1].children[0].value;
+        if (time && food) {
+          entries.push({ date, time, food });
         }
+      });
+
+      const batch = db.batch();
+      entries.forEach(entry => {
+        const ref = db.collection('dailyMeals').doc();
+        batch.set(ref, entry);
+      });
+
+      batch.commit().then(() => {
+        alert('Saved to Firebase!');
+        document.getElementById('mealInputs').innerHTML = '<tr><td><input type="time" /></td><td><input type="text" placeholder="E.g. Roti, Dal" /></td></tr>';
+        fetchEntries();
       });
     }
 
@@ -136,45 +118,28 @@
       const container = document.getElementById('entries');
       container.innerHTML = '';
 
-      const q = query(collection(db, 'weightGainLogs'), orderBy('date', 'asc'));
-      getDocs(q).then(snapshot => {
-        const dataPoints = [];
+      db.collection('dailyMeals').orderBy('date', 'desc').get().then(snapshot => {
+        const grouped = {};
         snapshot.forEach(doc => {
-          const data = doc.data();
-          dataPoints.push(data);
-
-          const meals = data.meals || {};
-          const div = document.createElement('div');
-          div.className = 'entry';
-
-          let mealHtml = '';
-          if (meals.breakfast) mealHtml += `<strong>🍳 Breakfast:</strong> ${meals.breakfast}<br>`;
-          if (meals.lunch) mealHtml += `<strong>🍛 Lunch:</strong> ${meals.lunch}<br>`;
-          if (meals.snacks) mealHtml += `<strong>☕ Snacks:</strong> ${meals.snacks}<br>`;
-          if (meals.dinner) mealHtml += `<strong>🍽️ Dinner:</strong> ${meals.dinner}<br>`;
-          if (data.notes) mealHtml += `<strong>📝 Notes:</strong> ${data.notes}<br>`;
-
-          div.innerHTML = `<strong>${data.date}</strong><br>${mealHtml}${data.weight ? '<strong>⚖️ Weight:</strong> ' + data.weight + ' kg' : ''}`;
-          container.appendChild(div);
+          const { date, time, food } = doc.data();
+          if (!grouped[date]) grouped[date] = [];
+          grouped[date].push({ time, food });
         });
 
-        renderChart(dataPoints.filter(d => d.weight));
+        for (const date in grouped) {
+          const section = document.createElement('div');
+          section.innerHTML = `<h3>${date}</h3>`;
+          grouped[date].forEach(entry => {
+            const p = document.createElement('p');
+            p.textContent = `${entry.time} – ${entry.food}`;
+            section.appendChild(p);
+          });
+          container.appendChild(section);
+        }
       });
     }
 
-    function fetchQuote() {
-      fetch('https://api.quotable.io/random')
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById('dailyQuote').innerText = `💬 "${data.content}" — ${data.author}`;
-        })
-        .catch(() => {
-          document.getElementById('dailyQuote').innerText = `💬 "Stay consistent and fueled up!"`;
-        });
-    }
-
-    fetchQuote();
-    fetchEntries(); // Initialize and fetch entries
+    fetchEntries();
   </script>
 </body>
 </html>
